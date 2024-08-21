@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Website Redirector</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #000000 0%, #434343 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            color: #fff;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            font-size: 28px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: #fff;
+        }
+
+        input[type="text"],
+        input[type="tel"] {
+            padding: 15px;
+            width: 100%;
+            margin-bottom: 20px;
+            font-size: 18px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            outline: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background-color: #222;
+            color: #fff;
+        }
+
+        input[type="text"]::placeholder,
+        input[type="tel"]::placeholder {
+            color: #bbb;
+        }
+
+        button {
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #000;
+            background-color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            width: 100%;
+        }
+
+        button:hover {
+            background-color: #020202;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Website Demo</h1>
+        <input type="text" id="websiteInput" placeholder="Enter website URL (e.g., https://example.com)">
+        <input type="tel" id="phoneInput" placeholder="Enter your phone number (e.g., +1234567890)">
+        <button onclick="redirectToFetch()">Fetch</button>
+    </div>
+
+    <script>
+        function redirectToFetch() {
+            const websiteInput = document.getElementById('websiteInput').value;
+            const phoneInput = document.getElementById('phoneInput').value;
+            const phonePattern = /^\+?\d{10,15}$/;
+
+            if (!websiteInput || !phoneInput) {
+                alert("Both website URL and phone number are required.");
+                return;
+            }
+
+            if (!phonePattern.test(phoneInput)) {
+                alert("Please enter a valid phone number.");
+                return;
+            }
+
+            window.location.href = `/fetch?url=${encodeURIComponent(websiteInput)}&phone=${encodeURIComponent(phoneInput)}`;
+        }
+    </script>
+</body>
+
+</html>

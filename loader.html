@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading...</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: linear-gradient(135deg, #e0e0e0 0%, #f4f4f4 100%);
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .loader {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            border-radius: 12px;
+            padding: 20px 30px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 8px solid #f3f3f3;
+            border-top: 8px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        p {
+            font-size: 18px;
+            color: #555;
+            margin: 0;
+            font-weight: 500;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="loader">
+        <div class="spinner"></div>
+        <p id="status">Getting product details...</p>
+    </div>
+
+    <script>
+        function updateStatus(status) {
+            document.getElementById('status').innerText = status;
+        }
+
+        function checkForContent() {
+            fetch('/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.isScraping) {
+                        updateStatus(data.status);
+                        setTimeout(checkForContent, 2000); // Poll every 2 seconds
+                    } else {
+                        fetch('/content')
+                            .then(response => response.text())
+                            .then(content => {
+                                document.open();
+                                document.write(content);
+                                document.close();
+                            });
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        // Start polling after page load
+        window.onload = checkForContent;
+    </script>
+
+</body>
+
+</html>
