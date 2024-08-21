@@ -72,19 +72,25 @@
 
         function checkForContent() {
             fetch('/status')
-                .then(response => response.json())
+                .then(response => response.text())  // Change to text to log raw response
                 .then(data => {
-                    if (data.isScraping) {
-                        updateStatus(data.status);
-                        setTimeout(checkForContent, 2000); // Poll every 2 seconds
-                    } else {
-                        fetch('/content')
-                            .then(response => response.text())
-                            .then(content => {
-                                document.open();
-                                document.write(content);
-                                document.close();
-                            });
+                    console.log(data);  // Log the raw response for debugging
+                    try {
+                        const jsonData = JSON.parse(data);  // Try parsing it as JSON
+                        if (jsonData.isScraping) {
+                            updateStatus(jsonData.status);
+                            setTimeout(checkForContent, 2000);
+                        } else {
+                            fetch('/content')
+                                .then(response => response.text())
+                                .then(content => {
+                                    document.open();
+                                    document.write(content);
+                                    document.close();
+                                });
+                        }
+                    } catch (e) {
+                        console.error("Failed to parse JSON:", e);
                     }
                 })
                 .catch(error => console.error('Error:', error));
