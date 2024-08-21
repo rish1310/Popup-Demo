@@ -148,18 +148,20 @@ export async function productScraper(url) {
     // Main function to orchestrate the entire scraping and processing
     async function main() {
         try {
-            fs.writeFileSync('status.txt', 'Scraping product details...');
+            const statusFilePath = '/tmp/status.txt';
+            const queryResultFilePath = '/tmp/queryResult.txt';
+            fs.writeFileSync(statusFilePath, 'Scraping product details...');
             const urls = await fetchUrls(`${url}`);
             const extractedUrls = extractUrls(urls);
 
-            fs.writeFileSync('status.txt', 'Summarizing product details...');
+            fs.writeFileSync(statusFilePath, 'Summarizing product details...');
             const dataScraped = await scrapeUrls(extractedUrls.slice(0, 50));
             const groqResponses = await getGroqResponses(dataScraped);
             const finalObject = prepareObject(extractedUrls, groqResponses);
             const summaryOfAllProducts = getSummaryOfAllProducts(finalObject);
 
             const query = `${basePrompt}\n${defaultInstructionPrompt}\n${defaultExampleQuestionsAndAnswers.map(item => item.join("\n")).join("\n")}\n${summaryOfAllProducts}`;
-            fs.writeFileSync('queryResult.txt', query, 'utf8');
+            fs.writeFileSync(queryResultFilePath, query, 'utf8');
             console.log('Query result stored in queryResult.txt');
             return query; // Return the query result if needed
         } catch (error) {
