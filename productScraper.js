@@ -1,7 +1,7 @@
 import axios from 'axios';
 import xml2json from 'xml2json';
 import puppeteer from 'puppeteer';
-import OpenAI from "openai";
+import OpenAI from 'openai';
 import dotenv from 'dotenv';
 import pLimit from 'p-limit';
 import fs from 'fs';
@@ -37,63 +37,70 @@ export async function productScraper(url) {
             "Should I visit Thailand or Dubai for a staycation?",
             "### I can help you with any skincare-related problems.\n\nHowever, if you're visiting these places, you could ask me alternative questions below:\n\n* For Thailand beach weather in January, which SPF sunscreen is best suited?\n* Does Dubai weather need any special moisturizers for skin hydration?"
         ]
-    ]
+    ];
 
     const limit = pLimit(10); // Set concurrency limit for parallel requests
 
-    // Function to get OpenAI chat completion for a given data
     async function getOpenAIChatCompletion(data) {
-        const response = await openai.chat.completions.create({
-            messages: [
-                {
-                    role: "user",
-                    content: `${data}\nSummarize the data in 30 to 40 words.`,
-                },
-            ],
-            model: "gpt-4o-mini",
-        });
-
-        return response.choices[0]?.message?.content;
-    }
-
-    // Function to fetch sitemap URLs from the target website
-    async function fetchUrls(url) {
-        const robotsTxtUrl = `${url}/robots.txt`;
-        const { data: robotsText } = await axios.get(robotsTxtUrl);
-        const sitemapMatch = robotsText.match(/Sitemap:\s*(\S+)/i);
-        if (!sitemapMatch) {
-            throw new Error("Sitemap not found");
+        try {
+            const response = await openai.chat.completions.create({
+                messages: [
+                    {
+                        role: "user",
+                        content: `${data}\nSummarize the data in 30 to 40 words.`,
+                    },
+                ],
+                model: "gpt-4o-mini",
+            });
+            return response.choices[0]?.message?.content || "No response content";
+        } catch (error) {
+            console.error('Error with OpenAI API:', error);
+            return "Error summarizing data";
         }
-        const sitemapUrl = sitemapMatch[1];
-        const { data: sitemapXml } = await axios.get(sitemapUrl);
-        const jsonData = JSON.parse(xml2json.toJson(sitemapXml));
-
-        const { data: urlsXml } = await axios.get(jsonData.sitemapindex.sitemap[0].loc);
-        return JSON.parse(xml2json.toJson(urlsXml));
     }
 
-    // Function to extract URLs that contain images from the sitemap data
+    async function fetchUrls(url) {
+        try {
+            const robotsTxtUrl = `${url}/robots.txt`;
+            const { data: robotsText } = await axios.get(robotsTxtUrl);
+            const sitemapMatch = robotsText.match(/Sitemap:\s*(\S+)/i);
+            if (!sitemapMatch) {
+                throw new Error("Sitemap not found in robots.txt");
+            }
+            const sitemapUrl = sitemapMatch[1];
+            const { data: sitemapXml } = await axios.get(sitemapUrl);
+            const jsonData = JSON.parse(xml2json.toJson(sitemapXml));
+
+            if (!jsonData.sitemapindex || !jsonData.sitemapindex.sitemap) {
+                throw new Error("Invalid sitemap data");
+            }
+            const { data: urlsXml } = await axios.get(jsonData.sitemapindex.sitemap[0].loc);
+            return JSON.parse(xml2json.toJson(urlsXml));
+        } catch (error) {
+            console.error('Error fetching or parsing URLs:', error);
+            throw error;
+        }
+    }
+
     function extractUrls(parsedData) {
-        const urls = parsedData.urlset.url || [];
-        return urls.filter(item => item['image:image'] !== undefined);
+        const urls = parsedData.urlset?.url || [];
+        return urls.filter(item => item['image:image']);
     }
 
-    // Function to scrape the content of a URL using Puppeteer
     async function scrapeUrl(url, browser) {
         const page = await browser.newPage();
         try {
-            await page.goto(url.loc, { waitUntil: 'networkidle2', timeout: 60000 }); // Increased timeout to 60 seconds
+            await page.goto(url.loc, { waitUntil: 'networkidle2', timeout: 60000 });
             const textContent = await page.evaluate(() => document.body.innerText);
             return textContent;
         } catch (error) {
             console.error(`Failed to scrape ${url.loc}:`, error.message);
-            return null; // Return null for failed scrapes
+            return null;
         } finally {
             await page.close();
         }
     }
 
-    // Function to scrape content from multiple URLs concurrently
     async function scrapeUrls(urls) {
         const browser = await puppeteer.launch({
             headless: true,
@@ -104,17 +111,14 @@ export async function productScraper(url) {
         const scrapedData = await Promise.all(scrapePromises);
 
         await browser.close();
-        return scrapedData.filter(data => data !== null); // Filter out failed scrapes
+        return scrapedData.filter(data => data !== null);
     }
 
-    // Function to get OpenAI chat responses for the scraped content
     async function getOpenAIResponses(scrapedData) {
         const responsePromises = scrapedData.map(data => getOpenAIChatCompletion(data));
-        const responses = await Promise.all(responsePromises);
-        return responses;
+        return Promise.all(responsePromises);
     }
 
-    // Function to prepare the final object combining scraped content and OpenAI responses
     function prepareObject(extractedUrls, openAIResponses) {
         return openAIResponses.map((response, index) => ({
             imageUrl: extractedUrls[index]['image:image']['image:loc'],
@@ -123,18 +127,14 @@ export async function productScraper(url) {
         }));
     }
 
-    // Function to get a summary of all products
     function getSummaryOfAllProducts(finalObject) {
         return finalObject.map(item => `${item.productTitle}\n${item.productDescription}`).join(' ');
     }
 
-    // Main function to orchestrate the entire scraping and processing
     async function main() {
         try {
-            const statusFilePath = '/tmp/status.txt';
-            const queryResultFilePath = '/tmp/queryResult.txt';
-            fs.writeFileSync(statusFilePath, 'Scraping product details...');
-            const urls = await fetchUrls(`${url}`);
+            fs.writeFileSync('status.txt', 'Scraping product details...');
+            const urls = await fetchUrls(url);
             const extractedUrls = extractUrls(urls);
 
             fs.writeFileSync('status.txt', 'Summarizing product details...');
@@ -144,12 +144,12 @@ export async function productScraper(url) {
             const summaryOfAllProducts = getSummaryOfAllProducts(finalObject);
 
             const query = `${basePrompt}\n${defaultInstructionPrompt}\n${defaultExampleQuestionsAndAnswers.map(item => item.join("\n")).join("\n")}\n${summaryOfAllProducts}`;
-            fs.writeFileSync(queryResultFilePath, query, 'utf8');
+            fs.writeFileSync('queryResult.txt', query, 'utf8');
             console.log('Query result stored in queryResult.txt');
-            return query; // Return the query result if needed
+            return query;
         } catch (error) {
             console.error("Error in main execution:", error);
-            throw error; // Propagate the error to be handled in server.js
+            throw error;
         }
     }
 

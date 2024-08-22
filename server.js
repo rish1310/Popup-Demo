@@ -1,7 +1,6 @@
 import express from 'express';
 import axios from 'axios';
 import path from 'path';
-import { exec } from 'child_process';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { productScraper } from './productScraper.js';
@@ -11,7 +10,6 @@ const app = express();
 const PORT = 3000;
 let currentStatus = 'Initializing...';
 
-let queryResult = null;
 // In-memory storage for scraped content
 let scrapedContent = null;
 let isScraping = false;
@@ -19,7 +17,7 @@ let isScraping = false;
 // Serve static files (like pop-up.js)
 app.use(express.static(path.join(process.cwd())));
 
-// Parse incoming request bodies in a middleware before your handlers
+// Parse incoming request bodies
 app.use(express.json());
 
 // Route to initiate scraping and show the loader
@@ -33,32 +31,19 @@ app.get('/fetch', async (req, res) => {
     // Show the loader page while scraping is happening
     res.sendFile(path.join(process.cwd(), 'loader.html'));
 
-    // Start the scraping process
     if (!isScraping) {
         isScraping = true;
         currentStatus = 'Scraping product details...'; // Update status
-        await productScraper(targetUrl);
-
-        // exec(`node productScraper.js "${targetUrl}"`, async (error, stdout, stderr) => {
-        // if (error) {
-        //     console.error(`Error executing productScraper.js: ${error.message}`);
-        //     isScraping = false;
-        //     return;
-        // }
-        // if (stderr) {
-        //     console.error(`stderr: ${stderr}`);
-        //     isScraping = false;
-        //     return;
-        // }
-        // console.log(`stdout: ${stdout}`);
-
-        // After scraping, update the status
-        currentStatus = 'Summarizing product details...';
 
         try {
+            // Call productScraper function
+            await productScraper(targetUrl);
+
+            currentStatus = 'Fetching product details...';
+
             const response = await axios.get(targetUrl, {
                 headers: {
-                    'User-Agent': req.get('User-Agent') // Forward the User-Agent header to mimic a browser request
+                    'User-Agent': req.get('User-Agent') // Forward the User-Agent header
                 }
             });
 
@@ -70,19 +55,20 @@ app.get('/fetch', async (req, res) => {
 
             // Store the scraped content
             scrapedContent = content;
-            queryResult = fs.readFileSync('queryResult.txt', 'utf8'); // Read the query result from the file
-            isScraping = false;
+            currentStatus = 'Scraping completed.';
         } catch (fetchError) {
-            console.error('Error fetching the target URL:', fetchError);
-            isScraping = false;
+            console.error('Error during scraping or fetching:', fetchError);
+            currentStatus = 'Error occurred during scraping.';
+            scrapedContent = null; // Reset scrapedContent on error
+        } finally {
+            isScraping = false; // Ensure the scraping flag is reset
         }
-        // });
     }
 });
+
 app.get('/status', (req, res) => {
     res.json({ isScraping, status: currentStatus });
 });
-
 
 // Route to check if scraping is done and get the content
 app.get('/content', (req, res) => {
@@ -105,7 +91,7 @@ app.post('/queries', async (req, res) => {
     }
 
     try {
-        const result = await userQueries(queryResult, userQuery); // Call userQueries function
+        const result = await userQueries(scrapedContent, userQuery); // Call userQueries function
         res.send(result);
     } catch (error) {
         console.error(`Error processing user query: ${error.message}`);
