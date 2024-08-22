@@ -1,9 +1,11 @@
-import Groq from 'groq-sdk';
+import OpenAI from 'openai';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+});
 
 export async function userQueries(query, userQuery) {
     if (!userQuery) {
@@ -11,14 +13,14 @@ export async function userQueries(query, userQuery) {
     }
 
     async function querySummary(query, userQuery) {
-        const response = await groq.chat.completions.create({
+        const response = await openai.chat.completions.create({
             messages: [
                 {
                     role: "user",
                     content: `${query}\n${userQuery}`,
                 },
             ],
-            model: "llama3-8b-8192",
+            model: "gpt-4o-mini",
         });
         return response.choices[0]?.message?.content;
     }

@@ -80,12 +80,7 @@ app.get('/fetch', async (req, res) => {
     }
 });
 app.get('/status', (req, res) => {
-    try {
-        res.json({ isScraping, status: currentStatus });
-    } catch (error) {
-        console.error('Error in /status:', error);
-        res.status(500).json({ error: "Internal Server Error" });
-    }
+    res.json({ isScraping, status: currentStatus });
 });
 
 

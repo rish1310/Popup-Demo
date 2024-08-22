@@ -1,17 +1,20 @@
 import axios from 'axios';
 import xml2json from 'xml2json';
 import puppeteer from 'puppeteer';
-import Groq from 'groq-sdk';
+import OpenAI from "openai";
 import dotenv from 'dotenv';
 import pLimit from 'p-limit';
 import fs from 'fs';
 
 dotenv.config();
+
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+});
+
 export async function productScraper(url) {
 
-
     const userQuery = "How can I treat acne scars?";
-    // const url = process.argv[2]; // The URL passed from server.js
     console.log('URL:', url);
 
     if (!url) {
@@ -19,9 +22,8 @@ export async function productScraper(url) {
         process.exit(1);
     }
 
-    // Now you can access the variables like this:
-    const basePrompt = "You are a helpful friend who is dermatologist for a skin-products company, trying to help customers understand their skincare problems and suggest some chemical ingredients.";
-    const defaultInstructionPrompt = "You will be given a question from a customer and you need to very briefly explain (in under 60-80 words and bullets) why the problem happens, with skincare suggestions and recommended products from the website. The whole answer should be in markdown format. Use the following examples of questions and answers as a reference:";
+    const basePrompt = "You are a helpful friend who is a dermatologist for a skin-products company, trying to help customers understand their skincare problems and suggest some chemical ingredients.";
+    const defaultInstructionPrompt = "You will be given a question from a customer and you need to very briefly explain (in under 60-80 words and bullets) why the problem happens, with skincare suggestions in markdown format.";
     const defaultExampleQuestionsAndAnswers = [
         [
             "I am a 28-year-old male working in the IT industry and travel daily on an auto rickshaw through 14 km of traffic. I experience a lot of pollution and am suffering from pimples and acne. What should I do?",
@@ -37,20 +39,21 @@ export async function productScraper(url) {
         ]
     ]
 
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
     const limit = pLimit(10); // Set concurrency limit for parallel requests
 
-    // Function to get Groq chat completion for a given data
-    async function getGroqChatCompletion(data) {
-        return groq.chat.completions.create({
+    // Function to get OpenAI chat completion for a given data
+    async function getOpenAIChatCompletion(data) {
+        const response = await openai.chat.completions.create({
             messages: [
                 {
                     role: "user",
                     content: `${data}\nSummarize the data in 30 to 40 words.`,
                 },
             ],
-            model: "llama3-8b-8192",
+            model: "gpt-4o-mini",
         });
+
+        return response.choices[0]?.message?.content;
     }
 
     // Function to fetch sitemap URLs from the target website
@@ -104,43 +107,23 @@ export async function productScraper(url) {
         return scrapedData.filter(data => data !== null); // Filter out failed scrapes
     }
 
-    // Function to get Groq chat responses for the scraped content
-    async function getGroqResponses(scrapedData) {
-        const responsePromises = scrapedData.map(data => getGroqChatCompletion(data));
+    // Function to get OpenAI chat responses for the scraped content
+    async function getOpenAIResponses(scrapedData) {
+        const responsePromises = scrapedData.map(data => getOpenAIChatCompletion(data));
         const responses = await Promise.all(responsePromises);
-        return responses.map(response => response.choices[0]?.message?.content);
+        return responses;
     }
 
-    // Function to prepare the final object combining scraped content and Groq responses
-    function prepareObject(extractedUrls, groqResponses) {
-        return groqResponses.map((response, index) => ({
+    // Function to prepare the final object combining scraped content and OpenAI responses
+    function prepareObject(extractedUrls, openAIResponses) {
+        return openAIResponses.map((response, index) => ({
             imageUrl: extractedUrls[index]['image:image']['image:loc'],
             productTitle: extractedUrls[index]['image:image']['image:title'],
             productDescription: response,
         }));
     }
 
-    // Function to query Groq with the summary of all products
-    async function querySummary(query, userQuery) {
-        const response = await groq.chat.completions.create({
-            messages: [
-                {
-                    role: "user",
-                    content: `${query}\n${userQuery}`,
-                },
-            ],
-            model: "llama-3.1-70b-versatile",
-        });
-        return response.choices[0]?.message?.content;
-    }
-
     // Function to get a summary of all products
-    function getSummaryOfAllProducts(finalObject) {
-        return finalObject.map(item => `${item.productTitle}\n${item.productDescription}`).join(' ');
-    }
-
-    // Main function to orchestrate the entire scraping and processing
-    let query = "";
     function getSummaryOfAllProducts(finalObject) {
         return finalObject.map(item => `${item.productTitle}\n${item.productDescription}`).join(' ');
     }
@@ -154,10 +137,10 @@ export async function productScraper(url) {
             const urls = await fetchUrls(`${url}`);
             const extractedUrls = extractUrls(urls);
 
-            fs.writeFileSync(statusFilePath, 'Summarizing product details...');
+            fs.writeFileSync('status.txt', 'Summarizing product details...');
             const dataScraped = await scrapeUrls(extractedUrls.slice(0, 50));
-            const groqResponses = await getGroqResponses(dataScraped);
-            const finalObject = prepareObject(extractedUrls, groqResponses);
+            const openAIResponses = await getOpenAIResponses(dataScraped);
+            const finalObject = prepareObject(extractedUrls, openAIResponses);
             const summaryOfAllProducts = getSummaryOfAllProducts(finalObject);
 
             const query = `${basePrompt}\n${defaultInstructionPrompt}\n${defaultExampleQuestionsAndAnswers.map(item => item.join("\n")).join("\n")}\n${summaryOfAllProducts}`;
@@ -172,4 +155,3 @@ export async function productScraper(url) {
 
     return main();
 }
-// export { query };
