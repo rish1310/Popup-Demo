@@ -50,7 +50,7 @@ app.get('/fetch', async (req, res) => {
             let content = response.data;
 
             // Inject the <script> tag for pop-up.js before the closing </body> tag
-            const scriptTag = `<script src="/pop-up.js"></script>`;
+            const scriptTag = `<script src="public/pop-up.js"></script>`;
             content = content.replace('</body>', `${scriptTag}</body>`);
 
             // Store the scraped content
