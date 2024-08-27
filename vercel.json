@@ -11,14 +11,5 @@
             "src": "/(.*)",
             "dest": "/server.js"
         }
-    ],
-    "env": {
-        "PUPPETEER_SKIP_DOWNLOAD": "true",
-        "CHROME_BIN": "/usr/bin/google-chrome"
-    },
-    "build": {
-        "commands": {
-            "install-chrome": "apt-get update && apt-get install -y google-chrome-stable"
-        }
-    }
+    ]
 }

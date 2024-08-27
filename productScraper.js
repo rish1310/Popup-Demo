@@ -1,10 +1,10 @@
 import axios from 'axios';
 import xml2json from 'xml2json';
-import puppeteer from 'puppeteer-core'; // Use puppeteer-core instead of puppeteer
+import puppeteer from 'puppeteer';
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
 import pLimit from 'p-limit';
-// import fs from 'fs'; // Uncomment if you plan to use file operations
+import fs from 'fs';
 
 dotenv.config();
 
@@ -103,7 +103,6 @@ export async function productScraper(url) {
 
     async function scrapeUrls(urls) {
         const browser = await puppeteer.launch({
-            executablePath: process.env.CHROME_BIN, // Use the installed Chrome binary
             headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox'],
         });
