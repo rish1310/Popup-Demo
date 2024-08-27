@@ -1,11 +1,10 @@
 import axios from 'axios';
 import xml2json from 'xml2json';
-import puppeteer from 'puppeteer-core';
-import chromium from 'chrome-aws-lambda';
+import puppeteer from 'puppeteer-core'; // Use puppeteer-core instead of puppeteer
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
 import pLimit from 'p-limit';
-import fs from 'fs';
+// import fs from 'fs'; // Uncomment if you plan to use file operations
 
 dotenv.config();
 
@@ -104,9 +103,9 @@ export async function productScraper(url) {
 
     async function scrapeUrls(urls) {
         const browser = await puppeteer.launch({
-            args: chromium.args,
-            executablePath: await chromium.executablePath,
-            headless: chromium.headless,
+            executablePath: process.env.CHROME_BIN, // Use the installed Chrome binary
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox'],
         });
 
         const scrapePromises = urls.map(url => limit(() => scrapeUrl(url, browser)));
@@ -135,15 +134,19 @@ export async function productScraper(url) {
 
     async function main() {
         try {
+            // fs.writeFileSync('status.txt', 'Scraping product details...');
             const urls = await fetchUrls(url);
             const extractedUrls = extractUrls(urls);
 
+            // fs.writeFileSync('status.txt', 'Summarizing product details...');
             const dataScraped = await scrapeUrls(extractedUrls.slice(0, 50));
             const openAIResponses = await getOpenAIResponses(dataScraped);
             const finalObject = prepareObject(extractedUrls, openAIResponses);
             const summaryOfAllProducts = getSummaryOfAllProducts(finalObject);
 
             query = `${basePrompt}\n${defaultInstructionPrompt}\n${defaultExampleQuestionsAndAnswers.map(item => item.join("\n")).join("\n")}\n${summaryOfAllProducts}`;
+            // fs.writeFileSync('queryResult.txt', query, 'utf8');
+            // console.log('Query result stored in queryResult.txt');
             console.log('Query Result', query);
             return query;
         } catch (error) {
@@ -151,6 +154,6 @@ export async function productScraper(url) {
             throw error;
         }
     }
-
+    // return query;
     return main();
 }
