@@ -20,8 +20,7 @@
     "http-proxy-middleware": "^3.0.0",
     "openai": "^4.56.0",
     "p-limit": "^6.1.0",
-    "puppeteer": "^23.2.0",
-    "puppeteer-core": "^23.2.0",
+    "puppeteer-core": "^10.4.0",
     "xml2json": "^0.12.0"
   }
 }
