@@ -13,7 +13,7 @@ const openai = new OpenAI({
 });
 
 export async function productScraper(url) {
-
+    let query = '';
     const userQuery = "How can I treat acne scars?";
     console.log('URL:', url);
 
@@ -133,25 +133,26 @@ export async function productScraper(url) {
 
     async function main() {
         try {
-            fs.writeFileSync('status.txt', 'Scraping product details...');
+            // fs.writeFileSync('status.txt', 'Scraping product details...');
             const urls = await fetchUrls(url);
             const extractedUrls = extractUrls(urls);
 
-            fs.writeFileSync('status.txt', 'Summarizing product details...');
+            // fs.writeFileSync('status.txt', 'Summarizing product details...');
             const dataScraped = await scrapeUrls(extractedUrls.slice(0, 50));
             const openAIResponses = await getOpenAIResponses(dataScraped);
             const finalObject = prepareObject(extractedUrls, openAIResponses);
             const summaryOfAllProducts = getSummaryOfAllProducts(finalObject);
 
-            const query = `${basePrompt}\n${defaultInstructionPrompt}\n${defaultExampleQuestionsAndAnswers.map(item => item.join("\n")).join("\n")}\n${summaryOfAllProducts}`;
-            fs.writeFileSync('queryResult.txt', query, 'utf8');
-            console.log('Query result stored in queryResult.txt');
+            query = `${basePrompt}\n${defaultInstructionPrompt}\n${defaultExampleQuestionsAndAnswers.map(item => item.join("\n")).join("\n")}\n${summaryOfAllProducts}`;
+            // fs.writeFileSync('queryResult.txt', query, 'utf8');
+            // console.log('Query result stored in queryResult.txt');
+            console.log('Query Result', query);
             return query;
         } catch (error) {
             console.error("Error in main execution:", error);
             throw error;
         }
     }
-
+    // return query;
     return main();
 }

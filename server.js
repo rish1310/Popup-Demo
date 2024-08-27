@@ -1,7 +1,6 @@
 import express from 'express';
 import axios from 'axios';
 import path from 'path';
-import fs from 'fs';
 import dotenv from 'dotenv';
 import { productScraper } from './productScraper.js';
 import { userQueries } from './userQueries.js';
@@ -13,6 +12,7 @@ let currentStatus = 'Initializing...';
 // In-memory storage for scraped content
 let scrapedContent = null;
 let isScraping = false;
+let query = '';
 
 // Serve static files (like pop-up.js)
 app.use(express.static(path.join(process.cwd())));
@@ -37,8 +37,8 @@ app.get('/fetch', async (req, res) => {
 
         try {
             // Call productScraper function
-            await productScraper(targetUrl);
-
+            query = await productScraper(targetUrl);
+            console.log("Query Details:", query);
             currentStatus = 'Fetching product details...';
 
             const response = await axios.get(targetUrl, {
@@ -91,7 +91,9 @@ app.post('/queries', async (req, res) => {
     }
 
     try {
-        const result = await userQueries(scrapedContent, userQuery); // Call userQueries function
+        // console.log(scrapedContent);
+        const result = await userQueries(query, userQuery); // Call userQueries function
+        console.log('Processed user query:', result);
         res.send(result);
     } catch (error) {
         console.error(`Error processing user query: ${error.message}`);
