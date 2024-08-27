@@ -54,7 +54,7 @@
     <script>
         let productCount = 0;
 
-        function updateStatus() {
+        function updateStatus() { // Fetch the status of the scraping process
             fetch('/status')
                 .then(response => response.json())
                 .then(data => {
