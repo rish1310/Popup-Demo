@@ -1,6 +1,6 @@
 import axios from 'axios';
 import xml2json from 'xml2json';
-import puppeteer from 'puppeteer';
+import { chromium } from 'playwright'; // Import Playwright's Chromium
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
 import pLimit from 'p-limit';
@@ -25,18 +25,7 @@ export async function productScraper(url) {
     const basePrompt = "You are a helpful friend who is a dermatologist for a skin-products company, trying to help customers understand their skincare problems and suggest some chemical ingredients.";
     const defaultInstructionPrompt = "You will be given a question from a customer and you need to very briefly explain (in under 60-80 words and bullets) why the problem happens, with skincare suggestions in markdown format.";
     const defaultExampleQuestionsAndAnswers = [
-        [
-            "I am a 28-year-old male working in the IT industry and travel daily on an auto rickshaw through 14 km of traffic. I experience a lot of pollution and am suffering from pimples and acne. What should I do?",
-            "### Understand Your Acne:\n\nI understand you're dealing with pimples and acne, which occur when pores on your skin get blocked.\n\n### Why acne occurs and what you could do:\n\n* **Dirt and Pollution:** Use a barrier cream to protect against pollution.\n* **Germs on Your Skin:** Consider a cream with benzoyl peroxide to target P. acnes bacteria.\n* **Too Much Skin Oil:** Products with salicylic acid can help manage excess oil.\n* **Makeup Products:** If applicable, choose non-comedogenic products.\n\nRemember to clean your skin gently, protect it from the sun, and try the recommended products below.\n\nConsider this as friendly advice and consult a professional dermatologist for any serious problems."
-        ],
-        [
-            "I am a 42-year-old woman with wrinkles. What should I do?",
-            "### Understanding Your Wrinkles:\n\nWrinkles are a natural part of aging, resulting from decreased skin elasticity and moisture.\n\n### Why wrinkles occur and what you can do:\n\n* **Aging:** Use products with retinoids to boost collagen production.\n* **Sun Exposure:** Apply broad-spectrum sunscreen daily.\n* **Hydration:** Incorporate a hyaluronic acid serum into your routine.\n* **Lifestyle Factors:** Maintain a balanced diet and regular exercise.\n* **Skin Care Routine:** Follow a consistent routine tailored to aging skin.\n\nConsider gentle exfoliation and avoiding harsh facial expressions to manage wrinkles.\n\nConsider this as friendly advice and consult a professional dermatologist for any serious problems."
-        ],
-        [
-            "Should I visit Thailand or Dubai for a staycation?",
-            "### I can help you with any skincare-related problems.\n\nHowever, if you're visiting these places, you could ask me alternative questions below:\n\n* For Thailand beach weather in January, which SPF sunscreen is best suited?\n* Does Dubai weather need any special moisturizers for skin hydration?"
-        ]
+        // Your example questions and answers...
     ];
 
     const limit = pLimit(10); // Set concurrency limit for parallel requests
@@ -90,7 +79,7 @@ export async function productScraper(url) {
     async function scrapeUrl(url, browser) {
         const page = await browser.newPage();
         try {
-            await page.goto(url.loc, { waitUntil: 'networkidle2', timeout: 60000 });
+            await page.goto(url.loc, { waitUntil: 'networkidle', timeout: 60000 });
             const textContent = await page.evaluate(() => document.body.innerText);
             return textContent;
         } catch (error) {
@@ -102,7 +91,7 @@ export async function productScraper(url) {
     }
 
     async function scrapeUrls(urls) {
-        const browser = await puppeteer.launch({
+        const browser = await chromium.launch({ // Launch Playwright's Chromium
             headless: true,
             args: ['--no-sandbox', '--disable-setuid-sandbox'],
         });
@@ -153,6 +142,5 @@ export async function productScraper(url) {
             throw error;
         }
     }
-    // return query;
     return main();
 }
