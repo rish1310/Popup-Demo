@@ -12,7 +12,7 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
 
-export async function productScraper(url) {
+export async function productScraper(url, statusCallback) {
     let query = '';
     const userQuery = "How can I treat acne scars?";
     console.log('URL:', url);
@@ -100,7 +100,10 @@ export async function productScraper(url) {
     }
 
     async function scrapeUrls(urls) {
-        const scrapePromises = urls.map(url => limit(() => scrapeUrl(url)));
+        const scrapePromises = urls.map(url => limit(() => {
+            statusCallback('Scraping product details...', url['image:image']['image:title']);
+            return scrapeUrl(url);
+        }));
         const scrapedData = await Promise.all(scrapePromises);
         return scrapedData.filter(data => data !== null);
     }
@@ -124,9 +127,12 @@ export async function productScraper(url) {
 
     async function main() {
         try {
+            statusCallback('Fetching URLs...', '');
             const urls = await fetchUrls(url);
             const extractedUrls = extractUrls(urls);
+            statusCallback('Starting product scraping...', '');
             const dataScraped = await scrapeUrls(extractedUrls.slice(0, 50));
+            statusCallback('Processing scraped data...', '');
             const openAIResponses = await getOpenAIResponses(dataScraped);
             const finalObject = prepareObject(extractedUrls, openAIResponses);
             const summaryOfAllProducts = getSummaryOfAllProducts(finalObject);

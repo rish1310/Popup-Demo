@@ -5,39 +5,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Loading...</title>
-    <link rel="icon" href="favicon-32x32.png" type="image/x-icon">
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            background: linear-gradient(135deg, #e0e0e0 0%, #f4f4f4 100%);
             margin: 0;
-            overflow: hidden;
+            background-color: #f0f0f0;
         }
 
-        .loader {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: #fff;
-            border-radius: 12px;
-            padding: 20px 30px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        .loader-container {
             text-align: center;
         }
 
         .spinner {
-            width: 60px;
-            height: 60px;
-            border: 8px solid #f3f3f3;
-            border-top: 8px solid #3498db;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
             border-radius: 50%;
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
-            margin-bottom: 20px;
+            margin: 20px auto;
         }
 
         @keyframes spin {
@@ -49,52 +39,65 @@
                 transform: rotate(360deg);
             }
         }
-
-        p {
-            font-size: 18px;
-            color: #555;
-            margin: 0;
-            font-weight: 500;
-        }
     </style>
 </head>
 
 <body>
-
-    <div class="loader">
+    <div class="loader-container">
         <div class="spinner"></div>
-        <p id="status">Getting product details...</p>
+        <p id="status-message">Getting product details...</p>
+        <p id="load-time">This may take up to a minute to load.</p>
+        <p id="product-count">Products detected: 0</p>
+        <p id="current-product"></p>
     </div>
 
     <script>
-        function updateStatus(status) {
-            document.getElementById('status').innerText = status;
-        }
+        let productCount = 0;
 
-        function checkForContent() {
+        function updateStatus() {
             fetch('/status')
                 .then(response => response.json())
                 .then(data => {
-                    if (data.isScraping) {
-                        updateStatus(data.status);
-                        setTimeout(checkForContent, 2000); // Poll every 2 seconds
-                    } else {
-                        fetch('/content')
-                            .then(response => response.text())
-                            .then(content => {
-                                document.open();
-                                document.write(content);
-                                document.close();
-                            });
+                    document.getElementById('status-message').textContent = data.status;
+                    if (data.status.includes('Scraping product details')) {
+                        productCount++;
+                        document.getElementById('product-count').textContent = `Products detected: ${productCount}`;
+                        if (data.currentProduct) {
+                            document.getElementById('current-product').textContent = `Currently scraping: ${data.currentProduct}`;
+                        }
+                    }
+                    if (!data.isScraping) {
+                        clearInterval(statusInterval);
+                        checkContent();
                     }
                 })
                 .catch(error => console.error('Error:', error));
         }
 
-        // Start polling after page load
-        window.onload = checkForContent;
-    </script>
+        function checkContent() {
+            fetch('/content')
+                .then(response => {
+                    if (response.ok) {
+                        return response.text();
+                    } else if (response.status === 202) {
+                        setTimeout(checkContent, 1000);
+                    } else {
+                        throw new Error('Content not available');
+                    }
+                })
+                .then(content => {
+                    if (content) {
+                        document.open();
+                        document.write(content);
+                        document.close();
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
 
+        const statusInterval = setInterval(updateStatus, 1000);
+        updateStatus(); // Initial call
+    </script>
 </body>
 
 </html>

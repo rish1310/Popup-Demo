@@ -13,6 +13,8 @@ let currentStatus = 'Initializing...';
 let scrapedContent = null;
 let isScraping = false;
 let query = '';
+let productCount = 0;
+let currentProductName = '';
 
 // Serve static files (like pop-up.js)
 app.use(express.static(path.join(process.cwd(), 'public')));
@@ -34,10 +36,16 @@ app.get('/fetch', async (req, res) => {
     if (!isScraping) {
         isScraping = true;
         currentStatus = 'Scraping product details...'; // Update status
+        productCount = 0;
+        currentProductName = '';
 
         try {
             // Call productScraper function
-            query = await productScraper(targetUrl);
+            query = await productScraper(targetUrl, (status, product) => {
+                currentStatus = status;
+                currentProductName = product;
+                productCount++;
+            });
             console.log("Query Details:", query);
             currentStatus = 'Fetching product details...';
 
@@ -67,12 +75,18 @@ app.get('/fetch', async (req, res) => {
 });
 
 app.get('/status', (req, res) => {
-    res.json({ isScraping, status: currentStatus });
+    res.json({
+        isScraping,
+        status: currentStatus,
+        productCount: productCount,
+        currentProduct: currentProductName
+    });
 });
 
 // Route to check if scraping is done and get the content
 app.get('/content', (req, res) => {
     if (scrapedContent) {
+        res.type('text/html');
         res.send(scrapedContent);
         scrapedContent = null; // Clear the content after sending
     } else if (isScraping) {
@@ -91,7 +105,6 @@ app.post('/queries', async (req, res) => {
     }
 
     try {
-        // console.log(scrapedContent);
         const result = await userQueries(query, userQuery); // Call userQueries function
         console.log('Processed user query:', result);
         res.send(result);

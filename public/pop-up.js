@@ -507,10 +507,10 @@
 
     popupContainer.innerHTML = `
         <!-- Your HTML content here -->
-        <button class="ort-popup-close-button">
+        <!-- <button class="ort-popup-close-button">
             <img src="https://cdn.shopify.com/extensions/ea356b32-b769-4e79-91d4-a2945ce01fa9/skinny-ai-assistant-34/assets/close-circle.svg"
                 alt="Close icon" class="ort-popup-close-icon" width="24px" height="24px" loading="lazy">
-        </button>
+        </button> -->
         <div class="ort-chatbot-block" id="ort-chatbot-block-popup-854395">
             <div class="ort-title-container">
                 <div class="ort-chatbot-title">
@@ -566,10 +566,10 @@
     document.body.appendChild(popupContainer);
 
     // Add event listeners and other functionality
-    const closeButton = popupContainer.querySelector('.ort-popup-close-button');
-    closeButton.addEventListener('click', () => {
-        popupContainer.style.display = 'none';
-    });
+    // const closeButton = popupContainer.querySelector('.ort-popup-close-button');
+    // closeButton.addEventListener('click', () => {
+    //     popupContainer.style.display = 'none';
+    // });
 
     function darkenColor(rgba, amount) {
         // Extract RGBA values from the rgba string
