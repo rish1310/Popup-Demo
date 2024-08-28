@@ -31,7 +31,7 @@ app.get('/fetch', async (req, res) => {
     }
 
     // Show the loader page while scraping is happening
-    res.sendFile(path.join(process.cwd(), 'loader.html'));
+    res.sendFile(path.join(process.cwd(), 'public', 'loader.html'));
 
     if (!isScraping) {
         isScraping = true;
@@ -116,7 +116,7 @@ app.post('/queries', async (req, res) => {
 
 // Serve the HTML file
 app.get('/', (req, res) => {
-    res.sendFile(path.join(process.cwd(), 'index.html'));
+    res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
 });
 
 app.listen(PORT, () => {
