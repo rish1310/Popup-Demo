@@ -3,8 +3,8 @@ import xml2json from 'xml2json';
 import OpenAI from 'openai';
 import dotenv from 'dotenv';
 import pLimit from 'p-limit';
-import fs from 'fs';
-import * as cheerio from 'cheerio'; // Add cheerio for parsing HTML
+import * as cheerio from 'cheerio';
+import { checkDomainScraped, saveDomainData, getDomainData } from './database-operations.js';
 
 dotenv.config();
 
@@ -22,10 +22,18 @@ export async function productScraper(url, statusCallback) {
         process.exit(1);
     }
 
+    const domain = new URL(url).hostname;
+
+    const isScraped = await checkDomainScraped(domain);
+    if (isScraped) {
+        console.log('Domain already scraped. Fetching data from database...');
+        query = await getDomainData(domain);
+        return query;
+    }
+
     const basePrompt = "You are a helpful friend who is a dermatologist for a skin-products company, trying to help customers understand their skincare problems and suggest some chemical ingredients.";
     const defaultInstructionPrompt = "You will be given a question from a customer and you need to very briefly explain (in under 60-80 words and bullets) why the problem happens, with skincare suggestions in markdown format. Always suggest products on the basis of the product data given to you.";
     const defaultExampleQuestionsAndAnswers = [
-        // Example questions and answers (unchanged)
         [
             "I am a 28-year-old male working in the IT industry and travel daily on an auto rickshaw through 14 km of traffic. I experience a lot of pollution and am suffering from pimples and acne. What should I do?",
             "### Understand Your Acne:\n\nI understand you're dealing with pimples and acne, which occur when pores on your skin get blocked.\n\n### Why acne occurs and what you could do:\n\n* **Dirt and Pollution:** Use a barrier cream to protect against pollution.\n* **Germs on Your Skin:** Consider a cream with benzoyl peroxide to target P. acnes bacteria.\n* **Too Much Skin Oil:** Products with salicylic acid can help manage excess oil.\n* **Makeup Products:** If applicable, choose non-comedogenic products.\n\nRemember to clean your skin gently, protect it from the sun, and try the recommended products below.\n\nConsider this as friendly advice and consult a professional dermatologist for any serious problems."
@@ -40,7 +48,7 @@ export async function productScraper(url, statusCallback) {
         ]
     ];
 
-    const limit = pLimit(10); // Set concurrency limit for parallel requests
+    const limit = pLimit(10);
 
     async function getOpenAIChatCompletion(data) {
         try {
@@ -48,7 +56,7 @@ export async function productScraper(url, statusCallback) {
                 messages: [
                     {
                         role: "user",
-                        content: `${data}\nSummarize the data in 30 to 40 words.`,
+                        content: `${data}\nSummarize the product data in 30 to 40 words.`,
                     },
                 ],
                 model: "gpt-4o-mini",
@@ -92,7 +100,7 @@ export async function productScraper(url, statusCallback) {
         try {
             const { data: html } = await axios.get(url.loc, { timeout: 60000 });
             const $ = cheerio.load(html);
-            return $('body').text(); // Adjust this selector as needed to get relevant content
+            return $('body').text();
         } catch (error) {
             console.error(`Failed to scrape ${url.loc}:`, error.message);
             return null;
@@ -141,6 +149,9 @@ export async function productScraper(url, statusCallback) {
 
             query = `${basePrompt}\n${defaultInstructionPrompt}\n${defaultExampleQuestionsAndAnswers.map(item => item.join("\n")).join("\n")}\n${summaryOfAllProducts}`;
             console.log('Query Result', query);
+
+            await saveDomainData(domain, query);
+
             return query;
         } catch (error) {
             console.error("Error in main execution:", error);

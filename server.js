@@ -1,28 +1,25 @@
 import express from 'express';
-import axios from 'axios';
 import path from 'path';
 import dotenv from 'dotenv';
+import axios from 'axios';
 import { productScraper } from './productScraper.js';
 import { userQueries } from './userQueries.js';
+import { connectToDatabase, closeDatabaseConnection } from './database-operations.js';
+
+dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 let currentStatus = 'Initializing...';
-
-// In-memory storage for scraped content
 let scrapedContent = null;
 let isScraping = false;
-let query = '';
+let scrapedData = ''; // Store the scraped data here
 let productCount = 0;
 let currentProductName = '';
 
-// Serve static files (like pop-up.js)
 app.use(express.static(path.join(process.cwd(), 'public')));
-
-// Parse incoming request bodies
 app.use(express.json());
 
-// Route to initiate scraping and show the loader
 app.get('/fetch', async (req, res) => {
     const targetUrl = req.query.url;
 
@@ -30,28 +27,26 @@ app.get('/fetch', async (req, res) => {
         return res.status(400).send('URL is required');
     }
 
-    // Show the loader page while scraping is happening
     res.sendFile(path.join(process.cwd(), 'public', 'loader.html'));
 
     if (!isScraping) {
         isScraping = true;
-        currentStatus = 'Scraping product details...'; // Update status
+        currentStatus = 'Scraping product details...';
         productCount = 0;
         currentProductName = '';
 
         try {
-            // Call productScraper function
-            query = await productScraper(targetUrl, (status, product, count) => {
+            scrapedData = await productScraper(targetUrl, (status, product, count) => {
                 currentStatus = status;
                 currentProductName = product;
                 productCount = count;
             });
-            console.log("Query Details:", query);
+            console.log("Scraped Data:", scrapedData);
             currentStatus = 'Fetching product details...';
 
             const response = await axios.get(targetUrl, {
                 headers: {
-                    'User-Agent': req.get('User-Agent') // Forward the User-Agent header
+                    'User-Agent': req.get('User-Agent')
                 }
             });
 
@@ -67,9 +62,10 @@ app.get('/fetch', async (req, res) => {
         } catch (fetchError) {
             console.error('Error during scraping or fetching:', fetchError);
             currentStatus = 'Error occurred during scraping.';
-            scrapedContent = null; // Reset scrapedContent on error
+            scrapedContent = null;
+            scrapedData = '';
         } finally {
-            isScraping = false; // Ensure the scraping flag is reset
+            isScraping = false;
         }
     }
 });
@@ -83,20 +79,18 @@ app.get('/status', (req, res) => {
     });
 });
 
-// Route to check if scraping is done and get the content
 app.get('/content', (req, res) => {
     if (scrapedContent) {
         res.type('text/html');
         res.send(scrapedContent);
         scrapedContent = null; // Clear the content after sending
     } else if (isScraping) {
-        res.status(202).send('Scraping in progress'); // 202 Accepted status
+        res.status(202).send('Scraping in progress');
     } else {
         res.status(500).send('No content available');
     }
 });
 
-// Route to handle user queries
 app.post('/queries', async (req, res) => {
     const userQuery = req.body.userQuery;
 
@@ -104,8 +98,12 @@ app.post('/queries', async (req, res) => {
         return res.status(400).send('userQuery is required');
     }
 
+    if (!scrapedData) {
+        return res.status(400).send('No scraped data available. Please fetch a URL first.');
+    }
+
     try {
-        const result = await userQueries(query, userQuery); // Call userQueries function
+        const result = await userQueries(scrapedData, userQuery);
         console.log('Processed user query:', result);
         res.send(result);
     } catch (error) {
@@ -114,11 +112,30 @@ app.post('/queries', async (req, res) => {
     }
 });
 
-// Serve the HTML file
 app.get('/', (req, res) => {
     res.sendFile(path.join(process.cwd(), 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running at http://localhost:${PORT}`);
+connectToDatabase().then(() => {
+    const server = app.listen(PORT, () => {
+        const address = server.address();
+        const actualPort = typeof address === 'string' ? address : address?.port;
+        console.log(`Server running at http://localhost:${actualPort}`);
+    }).on('error', (err) => {
+        if (err.code === 'EADDRINUSE') {
+            console.log(`Port ${PORT} is busy, trying another port...`);
+            server.listen(0); // This will choose a random available port
+        } else {
+            console.error('Error starting server:', err);
+            process.exit(1);
+        }
+    });
+}).catch(error => {
+    console.error('Failed to connect to the database. Server not started.', error);
+    process.exit(1);
+});
+
+process.on('SIGINT', async () => {
+    await closeDatabaseConnection();
+    process.exit(0);
 });
