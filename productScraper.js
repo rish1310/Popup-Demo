@@ -23,7 +23,7 @@ export async function productScraper(url, statusCallback) {
     }
 
     const basePrompt = "You are a helpful friend who is a dermatologist for a skin-products company, trying to help customers understand their skincare problems and suggest some chemical ingredients.";
-    const defaultInstructionPrompt = "You will be given a question from a customer and you need to very briefly explain (in under 60-80 words and bullets) why the problem happens, with skincare suggestions in markdown format.";
+    const defaultInstructionPrompt = "You will be given a question from a customer and you need to very briefly explain (in under 60-80 words and bullets) why the problem happens, with skincare suggestions in markdown format. Always suggest products on the basis of the product data given to you.";
     const defaultExampleQuestionsAndAnswers = [
         // Example questions and answers (unchanged)
         [
@@ -100,8 +100,10 @@ export async function productScraper(url, statusCallback) {
     }
 
     async function scrapeUrls(urls) {
+        let scrapedCount = 0;
         const scrapePromises = urls.map(url => limit(() => {
-            statusCallback('Scraping product details...', url['image:image']['image:title']);
+            scrapedCount++;
+            statusCallback('Scraping product details...', url['image:image']['image:title'], scrapedCount);
             return scrapeUrl(url);
         }));
         const scrapedData = await Promise.all(scrapePromises);
@@ -127,12 +129,12 @@ export async function productScraper(url, statusCallback) {
 
     async function main() {
         try {
-            statusCallback('Fetching URLs...', '');
+            statusCallback('Fetching URLs...', '', 0);
             const urls = await fetchUrls(url);
             const extractedUrls = extractUrls(urls);
-            statusCallback('Starting product scraping...', '');
+            statusCallback('Starting product scraping...', '', 0);
             const dataScraped = await scrapeUrls(extractedUrls.slice(0, 50));
-            statusCallback('Processing scraped data...', '');
+            statusCallback('Processing scraped data...', '', dataScraped.length);
             const openAIResponses = await getOpenAIResponses(dataScraped);
             const finalObject = prepareObject(extractedUrls, openAIResponses);
             const summaryOfAllProducts = getSummaryOfAllProducts(finalObject);

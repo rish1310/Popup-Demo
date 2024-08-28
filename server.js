@@ -41,10 +41,10 @@ app.get('/fetch', async (req, res) => {
 
         try {
             // Call productScraper function
-            query = await productScraper(targetUrl, (status, product) => {
+            query = await productScraper(targetUrl, (status, product, count) => {
                 currentStatus = status;
                 currentProductName = product;
-                productCount++;
+                productCount = count;
             });
             console.log("Query Details:", query);
             currentStatus = 'Fetching product details...';

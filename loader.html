@@ -52,19 +52,14 @@
     </div>
 
     <script>
-        let productCount = 0;
-
-        function updateStatus() { // Fetch the status of the scraping process
+        function updateStatus() {
             fetch('/status')
                 .then(response => response.json())
                 .then(data => {
                     document.getElementById('status-message').textContent = data.status;
-                    if (data.status.includes('Scraping product details')) {
-                        productCount++;
-                        document.getElementById('product-count').textContent = `Products detected: ${productCount}`;
-                        if (data.currentProduct) {
-                            document.getElementById('current-product').textContent = `Currently scraping: ${data.currentProduct}`;
-                        }
+                    document.getElementById('product-count').textContent = `Products detected: ${data.productCount}`;
+                    if (data.currentProduct) {
+                        document.getElementById('current-product').textContent = `Currently scraping: ${data.currentProduct}`;
                     }
                     if (!data.isScraping) {
                         clearInterval(statusInterval);
