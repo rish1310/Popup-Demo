@@ -5,6 +5,8 @@ import axios from 'axios';
 import { productScraper } from './productScraper.js';
 import { userQueries } from './userQueries.js';
 import { connectToDatabase, closeDatabaseConnection } from './database-operations.js';
+import { Domain } from './mongoose-models.js';
+import { getRecommendedProducts } from './chatgpt-utils.js'; // Import your function
 
 dotenv.config();
 
@@ -19,6 +21,8 @@ let currentProductName = '';
 
 app.use(express.static(path.join(process.cwd(), 'public')));
 app.use(express.json());
+
+let currentDomain = ''; // Variable to store the current domain
 
 app.get('/fetch', async (req, res) => {
     const targetUrl = req.query.url;
@@ -52,6 +56,10 @@ app.get('/fetch', async (req, res) => {
 
             let content = response.data;
 
+            // Extract the domain from the target URL
+            const url = new URL(targetUrl);
+            currentDomain = url.hostname; // Store the current domain
+
             // Inject the <script> tag for pop-up.js before the closing </body> tag
             const scriptTag = `<script src="/pop-up.js"></script>`;
             content = content.replace('</body>', `${scriptTag}</body>`);
@@ -69,6 +77,7 @@ app.get('/fetch', async (req, res) => {
         }
     }
 });
+
 
 app.get('/status', (req, res) => {
     res.json({
@@ -111,6 +120,47 @@ app.post('/queries', async (req, res) => {
         return res.status(500).send('Error processing query');
     }
 });
+
+// New route for recommending products
+app.post('/recommend-products', async (req, res) => {
+    const { userQuery } = req.body;
+
+    if (!userQuery) {
+        return res.status(400).send('userQuery is required');
+    }
+
+    if (!currentDomain) {
+        return res.status(400).send('Current domain is not available. Please fetch a URL first.');
+    }
+
+    // Remove the protocol from the currentDomain
+    const domainWithoutProtocol = currentDomain.replace(/^https?:\/\//, '');
+
+    try {
+        // Fetch product data from MongoDB using the current domain without the protocol
+        const domainData = await Domain.findOne({ domain: domainWithoutProtocol });
+
+        if (!domainData || domainData.products.length === 0) {
+            return res.status(404).json({ error: 'No products found for this domain.' });
+        }
+
+        // Prepare data for ChatGPT function calling
+        const chatGPTResponse = await getRecommendedProducts({
+            scrapedData: domainData.data,
+            userQuery,
+            products: domainData.products
+        });
+
+        // Respond with the recommended products (max 5)
+        const recommendedProducts = chatGPTResponse.recommendedProducts.slice(0, 5);
+        res.json({ recommendedProducts });
+
+    } catch (error) {
+        console.error('Error during product recommendation:', error);
+        res.status(500).json({ error: 'Error recommending products' });
+    }
+});
+
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(process.cwd(), 'public', 'index.html'));

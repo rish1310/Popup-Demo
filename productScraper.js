@@ -4,7 +4,7 @@ import OpenAI from 'openai';
 import dotenv from 'dotenv';
 import pLimit from 'p-limit';
 import * as cheerio from 'cheerio';
-import { checkDomainScraped, saveDomainData, getDomainData } from './database-operations.js';
+import { Domain } from './mongoose-models.js';
 
 dotenv.config();
 
@@ -24,11 +24,10 @@ export async function productScraper(url, statusCallback) {
 
     const domain = new URL(url).hostname;
 
-    const isScraped = await checkDomainScraped(domain);
-    if (isScraped) {
+    let domainDoc = await Domain.findOne({ domain });
+    if (domainDoc) {
         console.log('Domain already scraped. Fetching data from database...');
-        query = await getDomainData(domain);
-        return query;
+        return domainDoc.data;
     }
 
     const basePrompt = "You are a helpful friend who is a dermatologist for a skin-products company, trying to help customers understand their skincare problems and suggest some chemical ingredients.";
@@ -124,15 +123,31 @@ export async function productScraper(url, statusCallback) {
     }
 
     function prepareObject(extractedUrls, openAIResponses) {
-        return openAIResponses.map((response, index) => ({
-            imageUrl: extractedUrls[index]['image:image']['image:loc'],
-            productTitle: extractedUrls[index]['image:image']['image:title'],
-            productDescription: response,
+        return extractedUrls.map((urlItem, index) => ({
+            name: urlItem['image:image']['image:title'],
+            pageLink: urlItem.loc,
+            imageLink: urlItem['image:image']['image:loc'],
+            description: openAIResponses[index],
         }));
     }
 
     function getSummaryOfAllProducts(finalObject) {
-        return finalObject.map(item => `${item.productTitle}\n${item.productDescription}`).join(' ');
+        return finalObject.map(item => `${item.name}\n${item.description}`).join(' ');
+    }
+
+    async function saveDomainData(domainName, products, data) {
+        try {
+            const domainDoc = new Domain({
+                domain: domainName,
+                products: products,
+                data: data
+            });
+            await domainDoc.save();
+            console.log(`Successfully saved domain: ${domainName} with ${products.length} products`);
+        } catch (error) {
+            console.error('Error saving domain data:', error);
+            console.error('Problematic domain data:', JSON.stringify({ domainName, productCount: products.length }, null, 2));
+        }
     }
 
     async function main() {
@@ -144,13 +159,16 @@ export async function productScraper(url, statusCallback) {
             const dataScraped = await scrapeUrls(extractedUrls.slice(0, 50));
             statusCallback('Processing scraped data...', '', dataScraped.length);
             const openAIResponses = await getOpenAIResponses(dataScraped);
-            const finalObject = prepareObject(extractedUrls, openAIResponses);
+            const finalObject = prepareObject(extractedUrls.slice(0, 50), openAIResponses);
+
+            console.log('Final object to be saved:', JSON.stringify(finalObject, null, 2));
+
             const summaryOfAllProducts = getSummaryOfAllProducts(finalObject);
 
             query = `${basePrompt}\n${defaultInstructionPrompt}\n${defaultExampleQuestionsAndAnswers.map(item => item.join("\n")).join("\n")}\n${summaryOfAllProducts}`;
             console.log('Query Result', query);
 
-            await saveDomainData(domain, query);
+            await saveDomainData(domain, finalObject, query);
 
             return query;
         } catch (error) {

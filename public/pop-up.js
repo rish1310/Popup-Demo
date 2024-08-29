@@ -320,7 +320,7 @@
             display: block;
         }
 
-        .ort-product-name {
+        /*.ort-product-name {
             position: absolute;
             top: 0;
             width: 100%;
@@ -328,7 +328,7 @@
             text-align: center;
             padding: 4px;
             background-color: rgba(0, 0, 0, 0.5);
-        }
+        }*/
 
         .ort-footer {
             position: relative;
@@ -496,6 +496,60 @@
             .ort-example-query-button {
                 font-size: smaller;
             }
+                .ort-recommended-products-container {
+    display: flex;
+    overflow-x: auto; /* Enable horizontal scrolling */
+    padding: 10px; /* Optional: Add some padding */
+    gap: 10px; /* Optional: Add gap between product cards */
+}
+
+.ort-product-card {
+    min-width: 150px !important; /* Set a minimum width for product cards */
+    max-width: 150px !important; /* Set a maximum width for product cards */
+    flex-shrink: 0 !important; /* Prevent shrinking of product cards */
+    background-color: #f9f9f9 !important; /* Optional: Add background color */
+    border: 1px solid #ddd !important; /* Optional: Add a border */
+    border-radius: 5px !important; /* Optional: Add rounded corners */
+    padding: 5px !important; /* Reduce padding inside cards */
+    text-align: center !important; /* Center text inside cards */
+    overflow: hidden !important; /* Prevent overflow of contents */
+}
+
+.ort-product-image {
+    width: 100% !important; /* Make the image responsive */
+    height: auto !important; /* Maintain aspect ratio */
+    max-height: 150px !important; /* Set a maximum height for images */
+    object-fit: contain !important; /* Ensure the image fits within the card without distortion */
+}
+
+.ort-product-name {
+    text-align: center !important; /* Center the product name */
+    font-size: 14px !important; /* Adjust font size as needed */
+    margin: 5px 0 0 0 !important; /* Add some margin above the product name */
+}
+
+.ort-loader {
+    margin: 10px 0; /* Adjust margin as needed */
+    display: flex; /* Use flexbox to center the spinner */
+    justify-content: center; /* Center align spinner horizontally */
+    align-items: center; /* Center align spinner vertically */
+}
+
+.spinner {
+    border: 4px solid rgba(255, 255, 255, 0.3); /* Light border for spinner */
+    border-top: 4px solid #3498db; /* Blue color for spinner */
+    border-radius: 50%; /* Make it round */
+    width: 30px; /* Size of the spinner */
+    height: 30px; /* Size of the spinner */
+    animation: spin 1s linear infinite; /* Spin animation */
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+
     `;
     document.head.appendChild(style);
 
@@ -641,30 +695,96 @@
     // Arrays to store the user queries and responses
     const conversationHistory = [];
 
-    function displayChatResponse() {
+    // Inside the existing sendQueryToServer function or after its call
+    async function fetchRecommendedProducts(userQuery) {
+        try {
+            const response = await fetch('/recommend-products', {
+                method: 'POST', // Change to POST
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userQuery }) // Include userQuery in the request body
+            });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const data = await response.json(); // Parse the JSON response
+            console.log('Recommended Products:', data.recommendedProducts); // Log the recommended products
+            return data.recommendedProducts; // Return the recommended products array
+        } catch (error) {
+            console.error('There was a problem with fetching recommended products:', error);
+            return [];
+        }
+    }
+
+
+    async function displayChatResponse(userQuery, chatResponse) {
         const chatContainer = popupContainer.querySelector('.ort-chat');
         chatContainer.style.display = 'block';
 
-        // Clear existing content
-        chatContainer.innerHTML = '';
+        // Create user bubble
+        const userBubble = document.createElement('div');
+        userBubble.className = 'ort-user-chat-bubble';
+        userBubble.innerHTML = `<p>${userQuery}</p>`;
+        chatContainer.appendChild(userBubble);
 
-        // Loop through conversation history and display each query and response
-        conversationHistory.forEach(({ userQuery, chatResponse }) => {
-            const userBubble = document.createElement('div');
-            userBubble.className = 'ort-user-chat-bubble';
-            userBubble.innerHTML = `<p>${userQuery}</p>`;
-            chatContainer.appendChild(userBubble);
+        // Create response bubble
+        const responseBubble = document.createElement('div');
+        responseBubble.className = 'ort-chatbot-response-bubble';
+        responseBubble.innerHTML = convertMarkdownToHtml(chatResponse);
+        chatContainer.appendChild(responseBubble);
 
-            const responseBubble = document.createElement('div');
-            responseBubble.className = 'ort-chatbot-response-bubble';
-            responseBubble.innerHTML = convertMarkdownToHtml(chatResponse);
-            chatContainer.appendChild(responseBubble);
-        });
-
+        // Hide unnecessary elements
         document.querySelector('.ort-title-container').style.display = 'none';
         document.querySelector('.ort-large-mic-button-container').style.display = 'none';
         document.querySelector('.ort-example-queries-container').style.display = 'none';
+
+        // Create loader element with spinner
+        const loader = document.createElement('div');
+        loader.className = 'ort-loader';
+        loader.innerHTML = `<div class="spinner"></div>`;
+        loader.style.textAlign = 'center'; // Center align the spinner
+        chatContainer.appendChild(loader); // Append loader to chat container
+
+        // Fetch recommended products
+        const recommendedProducts = await fetchRecommendedProducts(userQuery);
+        console.log('Recommended Products:', recommendedProducts);
+
+        // Remove loader after fetching products
+        chatContainer.removeChild(loader);
+
+        // Display recommended products in a scrollable row
+        const productContainer = document.createElement('div');
+        productContainer.className = 'ort-recommended-products-container';
+
+        // Set display to flex for horizontal layout
+        productContainer.style.display = 'flex';
+        productContainer.style.overflowX = 'auto'; // Enable horizontal scrolling
+        productContainer.style.padding = '10px'; // Optional: Add some padding
+        productContainer.style.gap = '10px'; // Optional: Add gap between product cards
+
+        recommendedProducts.forEach(product => {
+            const productCard = document.createElement('div');
+            productCard.className = 'ort-product-card';
+            productCard.style.maxWidth = '150px'; // Set a maximum width for product cards
+            productCard.style.flexShrink = '0'; // Prevent shrinking of product cards
+            productCard.innerHTML = `
+                <a href="${product.pageLink}" target="_blank">
+                    <img src="${product.imageLink}" alt="${product.name}" class="ort-product-image" />
+                    <p class="ort-product-name" style="margin-top: 5px;">${product.name}</p>
+                </a>
+            `;
+            productContainer.appendChild(productCard);
+        });
+
+        chatContainer.appendChild(productContainer); // Append the product cards to chat container
     }
+
+
+
+
 
     popupContainer.style.display = 'block'; // Show the popup
     let chatResponse = '';
