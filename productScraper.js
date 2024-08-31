@@ -12,11 +12,6 @@ const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Helper function to normalize domain names
-function normalizeDomain(domain) {
-    return domain.replace(/^www\./, '');
-}
-
 export async function productScraper(url, statusCallback) {
     let query = '';
     const userQuery = "How can I treat acne scars?";
@@ -27,7 +22,7 @@ export async function productScraper(url, statusCallback) {
         process.exit(1);
     }
 
-    const domain = normalizeDomain(new URL(url).hostname);
+    const domain = new URL(url).hostname;
 
     let domainDoc = await Domain.findOne({ domain });
     if (domainDoc) {

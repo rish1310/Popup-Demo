@@ -31,6 +31,9 @@ app.get('/fetch', async (req, res) => {
         return res.status(400).send('URL is required');
     }
 
+    // Remove "www." if it exists in the URL
+    targetUrl = targetUrl.replace(/^www\./i, '');
+
     // Add "https://" to the URL if it does not start with "http://" or "https://"
     if (!/^https?:\/\//i.test(targetUrl)) {
         targetUrl = `https://${targetUrl}`;
@@ -66,14 +69,13 @@ app.get('/fetch', async (req, res) => {
             currentDomain = url.hostname; // Store the current domain
 
             // Inject the <script> tag for pop-up.js before the closing </body> tag
-            // const scriptTag = `<script src="/pop-up.js"></script>`;
             const scriptTag = `<script>
-    setTimeout(function() {
-        var script = document.createElement('script');
-        script.src = '/pop-up.js';
-        document.body.appendChild(script);
-    }, 5000);
-</script>`;
+                setTimeout(function() {
+                var script = document.createElement('script');
+                script.src = '/pop-up.js';
+                document.body.appendChild(script);
+                }, 5000);
+            </script>`;
             content = content.replace('</body>', `${scriptTag}</body>`);
 
             // Store the scraped content
@@ -89,6 +91,7 @@ app.get('/fetch', async (req, res) => {
         }
     }
 });
+
 
 
 app.get('/status', (req, res) => {
