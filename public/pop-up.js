@@ -741,45 +741,45 @@
         document.querySelector('.ort-large-mic-button-container').style.display = 'none';
         document.querySelector('.ort-example-queries-container').style.display = 'none';
 
-        // Create loader element with spinner
-        const loader = document.createElement('div');
-        loader.className = 'ort-loader';
-        loader.innerHTML = `<div class="spinner"></div>`;
-        loader.style.textAlign = 'center'; // Center align the spinner
-        chatContainer.appendChild(loader); // Append loader to chat container
+        // // Create loader element with spinner
+        // const loader = document.createElement('div');
+        // loader.className = 'ort-loader';
+        // loader.innerHTML = `<div class="spinner"></div>`;
+        // loader.style.textAlign = 'center'; // Center align the spinner
+        // chatContainer.appendChild(loader); // Append loader to chat container
 
-        // Fetch recommended products
-        const recommendedProducts = await fetchRecommendedProducts(userQuery);
-        console.log('Recommended Products:', recommendedProducts);
+        // // Fetch recommended products
+        // const recommendedProducts = await fetchRecommendedProducts(userQuery);
+        // console.log('Recommended Products:', recommendedProducts);
 
-        // Remove loader after fetching products
-        chatContainer.removeChild(loader);
+        // // Remove loader after fetching products
+        // chatContainer.removeChild(loader);
 
-        // Display recommended products in a scrollable row
-        const productContainer = document.createElement('div');
-        productContainer.className = 'ort-recommended-products-container';
+        // // Display recommended products in a scrollable row
+        // const productContainer = document.createElement('div');
+        // productContainer.className = 'ort-recommended-products-container';
 
-        // Set display to flex for horizontal layout
-        productContainer.style.display = 'flex';
-        productContainer.style.overflowX = 'auto'; // Enable horizontal scrolling
-        productContainer.style.padding = '10px'; // Optional: Add some padding
-        productContainer.style.gap = '10px'; // Optional: Add gap between product cards
+        // // Set display to flex for horizontal layout
+        // productContainer.style.display = 'flex';
+        // productContainer.style.overflowX = 'auto'; // Enable horizontal scrolling
+        // productContainer.style.padding = '10px'; // Optional: Add some padding
+        // productContainer.style.gap = '10px'; // Optional: Add gap between product cards
 
-        recommendedProducts.forEach(product => {
-            const productCard = document.createElement('div');
-            productCard.className = 'ort-product-card';
-            productCard.style.maxWidth = '150px'; // Set a maximum width for product cards
-            productCard.style.flexShrink = '0'; // Prevent shrinking of product cards
-            productCard.innerHTML = `
-                <a href="${product.pageLink}" target="_blank">
-                    <img src="${product.imageLink}" alt="${product.name}" class="ort-product-image" />
-                    <p class="ort-product-name" style="margin-top: 5px;">${product.name}</p>
-                </a>
-            `;
-            productContainer.appendChild(productCard);
-        });
+        // recommendedProducts.forEach(product => {
+        //     const productCard = document.createElement('div');
+        //     productCard.className = 'ort-product-card';
+        //     productCard.style.maxWidth = '150px'; // Set a maximum width for product cards
+        //     productCard.style.flexShrink = '0'; // Prevent shrinking of product cards
+        //     productCard.innerHTML = `
+        //         <a href="${product.pageLink}" target="_blank">
+        //             <img src="${product.imageLink}" alt="${product.name}" class="ort-product-image" />
+        //             <p class="ort-product-name" style="margin-top: 5px;">${product.name}</p>
+        //         </a>
+        //     `;
+        //     productContainer.appendChild(productCard);
+        // });
 
-        chatContainer.appendChild(productContainer); // Append the product cards to chat container
+        // chatContainer.appendChild(productContainer); // Append the product cards to chat container
     }
 
 
