@@ -24,7 +24,7 @@ export async function userQueries(query, userQuery) {
         });
         return response.choices[0]?.message?.content;
     }
-    console.log(query);
+    // console.log(query);
 
     try {
         const response = await querySummary(query, userQuery);

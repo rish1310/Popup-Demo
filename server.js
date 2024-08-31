@@ -53,7 +53,7 @@ app.get('/fetch', async (req, res) => {
                 currentProductName = product;
                 productCount = count;
             });
-            console.log("Scraped Data:", scrapedData);
+            // console.log("Scraped Data:", scrapedData);
             currentStatus = 'Fetching product details...';
 
             const response = await axios.get(targetUrl, {

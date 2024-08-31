@@ -14,7 +14,7 @@ const openai = new OpenAI({
 
 export async function productScraper(url, statusCallback) {
     let query = '';
-    const userQuery = "How can I treat acne scars?";
+    // const userQuery = "How can I treat acne scars?";
     console.log('URL:', url);
 
     if (!url) {
@@ -161,12 +161,12 @@ export async function productScraper(url, statusCallback) {
             const openAIResponses = await getOpenAIResponses(dataScraped);
             const finalObject = prepareObject(extractedUrls.slice(0, 50), openAIResponses);
 
-            console.log('Final object to be saved:', JSON.stringify(finalObject, null, 2));
+            // console.log('Final object to be saved:', JSON.stringify(finalObject, null, 2));
 
             const summaryOfAllProducts = getSummaryOfAllProducts(finalObject);
 
             query = `${basePrompt}\n${defaultInstructionPrompt}\n${defaultExampleQuestionsAndAnswers.map(item => item.join("\n")).join("\n")}\n${summaryOfAllProducts}`;
-            console.log('Query Result', query);
+            // console.log('Query Result', query);
 
             await saveDomainData(domain, finalObject, query);
 
