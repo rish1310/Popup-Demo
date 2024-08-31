@@ -25,10 +25,15 @@ app.use(express.json());
 let currentDomain = ''; // Variable to store the current domain
 
 app.get('/fetch', async (req, res) => {
-    const targetUrl = req.query.url;
+    let targetUrl = req.query.url;
 
     if (!targetUrl) {
         return res.status(400).send('URL is required');
+    }
+
+    // Add "https://" to the URL if it does not start with "http://" or "https://"
+    if (!/^https?:\/\//i.test(targetUrl)) {
+        targetUrl = `https://${targetUrl}`;
     }
 
     res.sendFile(path.join(process.cwd(), 'public', 'loader.html'));
@@ -61,7 +66,14 @@ app.get('/fetch', async (req, res) => {
             currentDomain = url.hostname; // Store the current domain
 
             // Inject the <script> tag for pop-up.js before the closing </body> tag
-            const scriptTag = `<script src="/pop-up.js"></script>`;
+            // const scriptTag = `<script src="/pop-up.js"></script>`;
+            const scriptTag = `<script>
+    setTimeout(function() {
+        var script = document.createElement('script');
+        script.src = '/pop-up.js';
+        document.body.appendChild(script);
+    }, 5000);
+</script>`;
             content = content.replace('</body>', `${scriptTag}</body>`);
 
             // Store the scraped content
